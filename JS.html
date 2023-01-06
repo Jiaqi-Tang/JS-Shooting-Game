@@ -1,0 +1,731 @@
+
+<html>
+<head>
+<title>Be the world’s best adventurer!</title>
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>
+
+<script type="text/javascript" src="https://static.codehs.com/gulp/1fd1e079bf6be1f1181a6d8af1dadaf6853df435/chs-js-lib/chs.js"></script>
+
+
+<style>
+canvas {
+    border: 1px solid black;
+    display: inline-block;
+    vertical-align: top;
+}
+
+pre {
+    border: 1px solid black;
+    display: inline-block;
+    width: 400px;
+    height: 500px;
+    background-color: #F5F5F5;
+}
+
+body {
+  background-color: #EDFFED;
+}
+
+p {
+	font-size: 18px;
+	margin-left: 30px;
+	margin-right: 30px;
+}
+
+.story {
+	border: 1px dotted black;
+	padding: 10px;
+	margin-left: 20%;
+	margin-right: 20%;
+}
+
+li {
+	margin-left: 30px;
+	font-size: 18px;
+}
+
+h3 {
+	margin-left: 30px;
+	font-size: 20px;
+}
+
+h1 {
+	font-size: 40px;
+	text-align: center;
+	padding: 10px;
+	background-color: #D1F4FF;
+	border: 12px groove #00B4C9;
+	margin-left: 25%;
+	margin-right: 25%;
+
+}
+
+#Lives{
+	color: #00AE00;
+}
+
+#HP{
+	color: #D00000;
+}
+
+.intro {
+	background-color: #FFFFFF;
+}
+
+</style>
+
+</head>
+
+<body>
+<h1>Be the world’s best adventurer!</h1>
+
+<p class="story">An evil monster lives in the cave of a mountain. Not even the best adventurer was close to killing that monster. 
+Due to the deadly poison in its silky red skin, the adventures could not contact the monster or stay in its cave for too long. 
+Even so, as the bravest adventurer in the world, you are determined to destroy the evil monster. Over 5 years, you’ve been searching 
+through all the mountains in the world, and finally…</p>
+
+<table>
+
+<tr class="intro">
+<td colspan="3">
+
+
+
+<h3><br/>Instructions:</h3>
+<p>You are the green ball and your goal is to kill the red monster by firing bullets. You must also avoid contacting the monster and the 
+red bullets it creates.</p>
+
+<h3>Note that:</h3>
+    <ul>
+      <li>You may jump as many times as you want in the air</li>
+      <li>Everywhere above the yellow line is SAFE ZONE</li>
+      <li>You can land on the bottom of the screen</li>
+    </ul>
+
+<h3>Controls:</h3>
+    <ul>
+      <li>Click the screen to start/pause the game</li>
+      <li>Press the left and right arrow keys to move left and right respectively</li>
+      <li>Press the up arrow key to jump</li>
+      <li>HOLD keys “S” and “D” to shoot left and right respectively</li>
+    </ul>
+
+</td>
+</tr>
+
+<tr height=20px>
+</tr>
+
+<tr>
+
+<td  width=150px>
+<h2 id="Lives">Lives: 3</h2>
+</td>
+
+<td  width=150px>
+<h2 id="HP">HP: 200</h2>
+</td>
+
+<td>
+<h2 id="Time">Time: 0</h2>
+</td>
+
+</tr>
+</table>
+
+<canvas
+width="400"
+height="500"
+class="codehs-editor-canvas"></canvas>
+<pre id="console"></pre>
+
+<script>
+window.onload = function() {
+
+// Time related variables
+var frameLength = 1000 * (1 / 60);
+var timerCounter = 0;
+var time = 0;
+// Ball, Monster and Platform variables
+var ball;
+var lives = 3;
+var monster;
+var monsterHP = 200;
+var PLATFORM_HEIGHT = 10;
+var PLATFORM_WIDTH = 100;
+// Vertical ball move variables
+var FIRST_DIFFERENCE = -19;
+var jumpingFirstDifference = FIRST_DIFFERENCE;
+var jumping = false;
+var fallingFirstDifference = 0;
+var SECOND_DIFFERENCE = 5 / 3;
+var land = false;
+var onPlatform = false;
+// Horizontal ball move variables
+var INTERVAL = 4;
+var moveLeft = false;
+var moveRight = false;
+// Shooting variables
+var shootingLeft = false;
+var shootingRight = false;
+var ballBullets = [];
+var SPEED = 6;
+var BULLET_RADIUS = 5;
+// Monster move variables and Monster bullet variables
+var dx = 1;
+var dy = -0.5;
+var monsterBullets = [];
+// Variables for optional features
+var gameInAction = false;
+var hardness = 1;
+var bulletCreation = 600;
+var bg = 0;
+var confettiDecorations = [];
+var count = 0;
+var theBackground;
+var gameStatus = 0;
+
+function start() {
+    // Draws the blue sky
+    drawRectangle(getWidth(), 350, 0, 0, new Color(150, 200, 215));
+    // Draws the gray montains and the black cave
+    drawOval(130, 450, 60, 350, Color.gray, 0);
+    drawOval(160, 600, 160, 350, Color.gray, 0);
+    drawOval(100, 300, 260, 350, Color.gray, 0);
+    drawOval(56, 160, 55, 355, Color.black, 0);
+    // Draws the gray floor
+    drawRectangle(getWidth(), 180, 0, 350, new Color(140, 140, 140));
+    
+    // Creates a circle named ball
+    ball = new Circle(18);
+    ball.setColor(Color.green);
+    ball.setPosition(getWidth() + 18, 340);
+    add(ball);
+    // Starts running the intro animation and allow the user to click to start the game
+    mouseClickMethod(mouseClickControl);
+    setTimer(introAnimation, frameLength);
+}
+
+function introAnimation(){
+    // Simulates the ball moving into the cave
+    if(ball.getX() > 55){
+        ball.move(-1.8, 0);
+    }else if(ball.getRadius() > 5){
+        ball.setRadius(ball.getRadius() - 0.54);
+        ball.move(0, 0.36);
+    }else{
+        remove(ball);
+    }
+}
+
+function runGame(){
+    // Asks the user how difficult they want te game to be
+    var level = readLine("How level will you like the game to be? (very easy, easy, medium, hard or very hard): ");
+    // Sets variables that determine the speed at which the monsters move depending on the difficulty level
+    if(level == "very easy"){
+        hardness = 0.25;
+        bulletCreation = 1200;
+    }else if(level == "easy"){
+        hardness = 0.5;
+    }else if(level == "hard"){
+        hardness = 2;
+    }else if(level == "very hard"){
+        hardness = 2;
+        bulletCreation = 150;
+    }
+    
+    // Sets the background to an image of a cave
+    theBackground = new WebImage("https://cdna.artstation.com/p/assets/images/images/000/315/598/large/lenar-shakirov-creepy-cave-by-wiredhuman-d86x9sa.jpg?1416747662");
+    theBackground.setSize (getWidth(), getHeight());
+    theBackground.setPosition(0,0); 
+    add(theBackground);
+    
+    // Creates a circle named ball
+    ball.setRadius(18);
+    ball.setPosition(70, 0);
+    add(ball);
+    
+    // Creates a circle named Monster
+    monster = new Circle(36);
+    monster.setColor(new Color(255, bg, bg));
+    monster.setPosition(monster.getRadius(), getHeight() - monster.getRadius());
+    add(monster);
+    
+    // draws platforms and the safe zone line
+    drawRectangle(getWidth(), 5, 0, 105, Color.yellow);
+    drawPlatforms();
+    
+    // Starts te actual game
+    setTimer(act, frameLength);
+    keyDownMethod(keyDownControl);
+    keyUpMethod(keyUpControl);
+}
+
+function mouseClickControl(){
+    // If the intro is currently running, start the game
+    // Else, pause or start the game
+    if(gameStatus == 0){
+        remove(ball);
+        gameStatus = 1;
+        stopTimer(introAnimation);
+        runGame();
+	document.getElementById("message").innerHTML = "Click to Play";
+    }else if(gameStatus == 1){
+        gameInAction = !gameInAction;
+	if(gameInAction){
+		document.getElementById("message").innerHTML = "Click to Pause";
+	}else{
+		document.getElementById("message").innerHTML = "Click to Play";
+	}
+    }
+}
+
+function act(){
+    // The code for the actual game so it only runs if the game is in action
+    if(gameInAction){
+        // Calculates time
+        timerCounter++;
+	if(timerCounter % 60 == 0){
+        	time = timerCounter / 60;
+		document.getElementById("Time").innerHTML = "Time: " + time;
+	}
+        /* If the player took unrealisticly long to play the game, assume they 
+        cheated by going off screen or they left their computer. Therefore, stop 
+        the game after 10 minutes and announce the player is dead */
+        if(timerCounter > 36000){
+            stopTimer(act);
+            drawRectangle(222, 40, 78, 175, Color.white);
+            addText("Game Over", "35pt Fontdiner", 80, 210, new Color(170, 0, 0));
+            addText("You took too long to play the game", "18pt Arial", 15, 330, Color.white);
+        }
+        // moves the ball and monster
+        moveBall();
+        moveMonster();
+        // Moves the bullets of the ball
+        moveBallBullets();
+        // Creates ball bullets with a delay of 2/15 seconds
+        if(shootingLeft && timerCounter % 8 == 0){
+            createBullets(-1);
+        }else if(shootingRight && timerCounter % 8 == 0){
+            createBullets(1);
+        }
+        // Checks if the monster is died. If so, it stops the actual game and runs an ending animation
+        if(monsterHP == 0){
+            stopTimer(act);
+		gameStatus = 2;
+		document.getElementById("message").innerHTML = "Refresh to try again";
+            runWinningAnimation();
+        }
+        // Moves the monster bullets and creates bullets sets based on the bulletCreation delay
+        if(timerCounter % bulletCreation == 0){
+    	    createMonsterBullets();
+    	}
+        moveMonsterBullets();
+        // Removes the player's life if they contact the monster
+        if(checkCollision(ball.getX(), ball.getY(), monster.getX(), monster.getY(), ball.getRadius() + monster.getRadius())){
+            lives--;
+		document.getElementById("Lives").innerHTML = "Lives: " + lives;
+            // If the player have still has lives, move it back to the safe zone
+            if(lives != 0){
+                ball.setPosition(70, 0);
+            }
+        }
+        // Checks if the player is died.  If so, it stops the actual game and runs an ending animation
+        if(lives == 0){
+            stopTimer(act);
+		gameStatus = 2;
+		document.getElementById("message").innerHTML = "Refresh to try again";
+            runLosingAnimation();
+        }
+    }
+}
+
+function keyDownControl(e){
+    // Only happens if the game is in action
+    if(gameInAction){
+        if(e.keyCode == Keyboard.UP){
+            // starts jump and resets the jumping variable
+            jumping = true;
+            fallingFirstDifference = 0;
+            // allows ball to jump in the air
+            jumpingFirstDifference = FIRST_DIFFERENCE;
+        }
+        
+        // Moves left and right
+        if(e.keyCode == Keyboard.LEFT) {
+    		moveLeft = true;
+    	}
+    	if(e.keyCode == Keyboard.RIGHT) {
+    		moveRight = true;
+    	}
+    	// Creates bullets shooting left and right
+    	if(e.keyCode == Keyboard.letter('S')) {
+    		shootingLeft = true;
+    	}
+    	if(e.keyCode == Keyboard.letter('D')) {
+    		shootingRight = true;
+    	}
+    }
+}
+
+function keyUpControl(e){
+    // Stops the ball moving left or right when key is released
+    if(e.keyCode == Keyboard.LEFT) {
+		moveLeft = false;
+	}
+	if(e.keyCode == Keyboard.RIGHT) {
+		moveRight = false;
+	}
+	// Stops bullet creation
+	if(e.keyCode == Keyboard.letter('S')) {
+		shootingLeft = false;
+	}
+	if(e.keyCode == Keyboard.letter('D')) {
+		shootingRight = false;
+	}
+}
+
+function moveBall(){
+/* Controls all movement of the ball such as jumping, falling, landing as well
+as moving left or right */
+
+    var positionToLand;
+    var counter = 0;
+    // Checks if the ball has passed a platform on it fall
+    /* the i value moves up by 9 because the platform height is 10 so this way 
+    it is the most efficient and will not miss any platforms */
+    for(var i = 0; i < fallingFirstDifference; i += 9){
+        // Gets the element i pixels above the bottom if the ball
+        var element = getElementAt(ball.getX(), ball.getY() + ball.getRadius() - i + 1);
+        // Checks if the element is a platform
+        if(element != ball && element != theBackground && element != null && element.getColor() == Color.gray){
+            // If so, note that the ball did land on a platform and note its correct position to land
+            counter++;
+            onPlatform = true;
+            positionToLand = ball.getY() + ball.getRadius() - i + 1;
+        }
+    }
+    // If the ball did not land on a platform, make note of that
+    if(counter == 0){
+        onPlatform = false;
+    }
+    
+    // Stops jump when ball lands on the floor and place the ball at the bottom of the canvas
+    if(ball.getY() + ball.getRadius() >= getHeight() && !jumping){
+        ball.setPosition(ball.getX(), getHeight() - ball.getRadius());
+        land = true;
+    // Stops the ball if it lands on the platform
+    }else if(onPlatform && !jumping){
+        ball.setPosition(ball.getX(), positionToLand - ball.getRadius());
+        land = true;
+        // move the ball up until it sits at the top of the platform
+        while(true){
+            ball.move(0, -1);
+            if(getElementAt(ball.getX(), ball.getY() + ball.getRadius()) == theBackground){
+                ball.move(0, 1);
+                break;
+            }
+        }
+    /* If the ball did not land on the bottom of the canvas and did not 
+    land on a platform than it did not land */
+    }else{
+        land = false;
+    }
+    
+    if(land){
+        // Reset values for the falling and jumping modes
+        fallingFirstDifference = 0;
+        jumping = false;
+    }else if(jumping){
+        /* Simulates jumping by moving the ball up by it jumping firstdiference, 
+        and changing the jumping frist difference ever time by the jumping second 
+        difference */
+        ball.move(0, jumpingFirstDifference);
+        jumpingFirstDifference += SECOND_DIFFERENCE;
+        // if the ball arrived at it's highest point, stop jumping
+        if (jumpingFirstDifference > 0){
+            jumping = false;
+        }
+    }else{
+        // Simulates falling
+        ball.move(0, fallingFirstDifference);
+        fallingFirstDifference += SECOND_DIFFERENCE;
+    }
+    
+    // Moves left and right
+    if(moveLeft){
+        ball.move(-1 * INTERVAL, 0);
+    }
+    if(moveRight){
+        ball.move(INTERVAL, 0);
+    }
+}
+
+function createBullets(leftRight){
+    // creates the bullets with a direction they go
+    var newBullet = {
+        circle: new Circle(BULLET_RADIUS),
+        direction: leftRight
+    }
+    /* sets the position of the bullet at the center of the ball, sets the 
+    color, adds the bullet to the convas and adds it to the ball bullet array */
+    newBullet.circle.setPosition(ball.getX(), ball.getY());
+    newBullet.circle.setColor(Color.blue);
+    add(newBullet.circle);
+    ballBullets.push(newBullet);
+}
+
+function moveBallBullets(){
+    // moves all bullets in the array in the direction they are shot at
+    for (var i = 0; i < ballBullets.length; i++){
+        ballBullets[i].circle.move(ballBullets[i].direction * SPEED, 0);
+        // removes bullet if it goes off screen
+        if(ballBullets[i].circle.getX() > getWidth() || ballBullets[i].circle.getX() < 0){
+            remove(ballBullets[i].circle);
+            ballBullets.remove(i);
+            i--;
+        // Checks if the bullets hit the monster
+        }else if(checkCollision(monster.getX(), monster.getY(), ballBullets[i].circle.getX(), 
+        ballBullets[i].circle.getY(), monster.getRadius() + BULLET_RADIUS)){
+            /* if so, remove that bullter, remove one hp from the monster, 
+            and make the monster slightly lighter */
+            monsterHP--;
+	document.getElementById("HP").innerHTML = "HP: " + monsterHP;
+            bg++;
+            monster.setColor(new Color(255, bg, bg))
+            remove(ballBullets[i].circle);
+            ballBullets.remove(i);
+            i--;
+        }
+    }
+}
+
+function moveMonster(){
+    // moves the monster. The speed it moves at depends on the difficulty level
+    monster.move(dx * hardness, dy * hardness);
+    // ensures that the monster stays on screen and out of the safezone
+    if(monster.getX() + monster.getRadius() > getWidth() && dx > 0){
+		dx = -dx;
+	}
+	if(monster.getX() - monster.getRadius() < 0 && dx < 0){
+		dx = -dx;
+	}
+	if(monster.getY() + monster.getRadius() > getHeight() && dy > 0){
+		dy = -dy;
+	}
+	if(monster.getY() - monster.getRadius() < 110 && dy < 0){
+		dy = -dy;
+	}
+	// changes the direction of movement of the monster every 2 seconds
+	if(timerCounter % 240 == 0){
+	    dx = Randomizer.nextFloat(0.5, 1.25);
+	    dy = Randomizer.nextFloat(0.25, 0.75);
+	    if(Randomizer.nextInt(0, 1) == 0){
+	        dx = -dx;
+	    }
+	    if(Randomizer.nextInt(0, 1) == 0){
+	        dy = -dy;
+	    }
+	}
+}
+
+function createMonsterBullets(){
+    // Determines the number of bullets created at once
+    var num = Randomizer.nextInt(5, 12);
+	// Creates the bullets and gives them an unique direction of movement
+    for(var i = 0; i < num; i++){
+    	var monsterBullet = {
+            circle: new Circle(BULLET_RADIUS),
+            // calculates the x and y shift of the bullets such that they move 1 unit every framlength
+            horizontalShift: Math.cos(2 * i * Math.PI / num),
+            verticalShift: Math.sin(2 * i * Math.PI / num)
+        }
+        // places the bullet at the monster, and adds the bullet
+        monsterBullet.circle.setPosition(monster.getX(), monster.getY());
+        monsterBullet.circle.setColor(Color.randomRed());
+        add(monsterBullet.circle);
+        monsterBullets.push(monsterBullet);
+    }
+}
+
+function moveMonsterBullets(){
+    for (var i = 0; i < monsterBullets.length; i++){
+        // moves all the bullet at a speed that depends on the difficulty level
+        monsterBullets[i].circle.move(monsterBullets[i].horizontalShift * hardness, monsterBullets[i].verticalShift * hardness);
+        // Removes the bullets if they are off screen or entering the safezone
+        if(monsterBullets[i].circle.getX() < 0 || monsterBullets[i].circle.getX() > getWidth() 
+        || monsterBullets[i].circle.getY() - BULLET_RADIUS < 110 || monsterBullets[i].circle.getY() > getHeight()){
+            remove(monsterBullets[i].circle);
+            monsterBullets.remove(i);
+            i--;
+        /* if the bullet hits the player, remove that bullet, remove a life. 
+        If the player is not dead yet, revive them in the safe zone */
+        }else if(checkCollision(ball.getX(), ball.getY(), monsterBullets[i].circle.getX(), 
+        monsterBullets[i].circle.getY(), ball.getRadius() + BULLET_RADIUS)){
+            lives--;
+		document.getElementById("Lives").innerHTML = "Lives: " + lives;
+            if(lives != 0){
+                ball.setPosition(70, 0);
+            }
+        }
+    }
+}
+
+function checkCollision(x1, y1, x2, y2, d){
+    // Checks of 2 circles collide using their coordinates and distance required to touch
+    var distance = Math.sqrt(Math.pow(x1 - x2, 2) + Math.pow(y1 - y2, 2));
+    
+    if(distance <= d){
+        return true;
+    }else{
+        return false;
+    }
+}
+
+function runLosingAnimation(){
+    // Draws the icons and redraws the platforms so the icons don't cover the platforms
+    drawHappyIcon(monster);
+    drawDeadIcon(ball);
+    drawPlatforms();
+    setTimer(losingAnimation, frameLength);
+}
+
+function losingAnimation(){
+    // draws a random blood splater and adds it to the screen
+    drawOval(Randomizer.nextInt(1, 20), Randomizer.nextInt(1, 20), Randomizer.nextInt(0, getWidth()), 
+    Randomizer.nextInt(0, getHeight()), Color.randomRed(), Randomizer.nextInt(0, 90));
+    count++;
+    // if 500 splatters are drawn, stop drawning and display the loosing messages
+    if(count == 500){
+        stopTimer(losingAnimation);
+        
+        drawRectangle(222, 40, 78, 175, Color.white);
+        addText("Game Over", "35pt Fontdiner", 80, 210, new Color(170, 0, 0));
+        addText("You are defeated by the Monster", "18pt Arial", 25, 330, new Color(170, 100, 100));
+    }
+}
+
+function runWinningAnimation(){
+    // draws the icons and adds the winning messages
+    drawDeadIcon(monster);
+    drawHappyIcon(ball);
+    drawPlatforms();
+    drawRectangle(260, 45, 63, 175, Color.white);
+    addText("Congratulations", "30pt Fontdiner", 65, 210, new Color(0, 170, 0));
+    addText("You defeated the Monster", "23pt Arial", 25, 330, new Color(100, 170, 100));
+    // creates and adds 1000 small rectangle that act as confetti
+    for(var i = 0; i < 1000; i++){
+
+    	var confetti = {
+            rect: new Rectangle(5, 5),
+            xPosition: Randomizer.nextInt(0, getWidth() - 5),
+            verticalShift: Randomizer.nextFloat(1, 8),
+            horizontalShift: Randomizer.nextFloat(-1, 1)
+        }
+        
+        confetti.rect.setPosition(confetti.xPosition, -50);
+        confetti.rect.setColor(Randomizer.nextColor());
+        add(confetti.rect);
+        confettiDecorations.push(confetti);
+    }
+    
+    setTimer(winningAnimation, frameLength);
+}
+
+function winningAnimation(){
+    // moves the confetti based on their x and y shifts
+    for (var i = 0; i < confettiDecorations.length; i++){
+        confettiDecorations[i].rect.move(confettiDecorations[i].horizontalShift, confettiDecorations[i].verticalShift);
+        // removes confetti if it goes off screen
+        if(confettiDecorations[i].rect.getX() > getWidth() || confettiDecorations[i].rect.getX() < 0 || confettiDecorations[i].rect.getY() > getHeight()){
+            remove(confettiDecorations[i].rect);
+            confettiDecorations.remove(i);
+            i--;
+        }
+    }
+}
+
+function drawDeadIcon(circle){
+    // draws the 2 eyes base on the position and the radius and position of the ball
+    for(var i = 1; i >= -1; i -= 2){
+        var line = new Line(circle.getX() - i * 1/4 * circle.getRadius(), circle.getY() - 1/8 * circle.getRadius(), 
+        circle.getX() - i * 1/2 * circle.getRadius(), circle.getY() - 1/2 * circle.getRadius());
+        line.setLineWidth(1/12 * circle.getRadius());
+        add(line);
+        var line = new Line(circle.getX() - i * 1/2 * circle.getRadius(), circle.getY() - 1/8 * circle.getRadius(), 
+        circle.getX() - i * 1/4 * circle.getRadius(), circle.getY() - 1/2 * circle.getRadius());
+        line.setLineWidth(1/12 * circle.getRadius());
+        add(line);
+    }
+    // draws the mouth
+    var line = new Line(circle.getX() - 1/2 * circle.getRadius(), circle.getY() + 1/3 * circle.getRadius(), 
+    circle.getX() + 1/2 * circle.getRadius(), circle.getY() + 1/3 * circle.getRadius());
+    line.setLineWidth(1/12 * circle.getRadius());
+    add(line);
+}
+
+function drawHappyIcon(circle){
+    // draws the eyes
+    for(var i = 1; i >= -1; i -= 2){
+        var eye = new Circle(circle.getRadius() / 6);
+        eye.setPosition(circle.getX() - i * 1/3 * circle.getRadius(), circle.getY() - 1/3 * circle.getRadius());
+        add(eye);
+    }
+    // draws the mouth
+    var arc = new Arc(circle.getRadius() / 2, 180, 0, 0);
+    arc.setPosition(circle.getX(), circle.getY() + circle.getRadius() / 6);
+    add(arc);
+}
+
+function drawPlatforms(){
+    // draws all the platforms
+    drawRectangle(PLATFORM_WIDTH, PLATFORM_HEIGHT, 300, 400, Color.gray);
+    drawRectangle(PLATFORM_WIDTH, PLATFORM_HEIGHT, 50, 400, Color.gray);
+    drawRectangle(PLATFORM_WIDTH, PLATFORM_HEIGHT, 120, 300, Color.gray);
+    drawRectangle(PLATFORM_WIDTH, PLATFORM_HEIGHT, 260, 250, Color.gray);
+    drawRectangle(PLATFORM_WIDTH, PLATFORM_HEIGHT, 100, 200, Color.gray);
+    drawRectangle(PLATFORM_WIDTH, PLATFORM_HEIGHT, 300, 150, Color.gray);
+    drawRectangle(PLATFORM_WIDTH + 20, PLATFORM_HEIGHT, 0, 100, Color.gray);
+    drawRectangle(PLATFORM_WIDTH, PLATFORM_HEIGHT, 200, 100, Color.gray);
+}
+
+// Helper functions that create rectangles, ovals, and text
+
+function drawRectangle(length, width, x, y, color){
+    var rect = new Rectangle(length, width);
+    rect.setPosition(x, y);
+    rect.setColor(color);
+    add(rect);
+}
+
+function drawOval(width, height, x, y, color, rotation){
+    var oval = new Oval(width, height);
+    oval.setPosition(x, y);
+    oval.setColor(color);
+    oval.setRotation (rotation);
+    add(oval);
+}
+
+function addText(text, font, x, y, color){
+    var txt = new Text(text, font);
+    txt.setPosition(x, y);
+    txt.setColor(color);
+    add(txt);
+}
+
+
+    if (typeof start === 'function') {
+        start();
+    }
+};
+</script>
+
+<h1 id="message">Click to Start</h1>
+
+</body>
+</html>
+
+
+
+
